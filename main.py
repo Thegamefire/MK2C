@@ -70,7 +70,7 @@ def on_press(key):
         if key.char in current_mapping:   #Configure letter Keys
             if not pressed_dict[key.char]:
                 print(current_mapping[key.char])    #temporary code in place for VGamepad
-                button_to_press = get_mapped_button(key.char)
+                button_to_press = get_mapped_button(key.char)   #Conversion to make mappings.py more user-friendly
                 if button_to_press:
                     gamepad.press_button(button=button_to_press)
                 else:

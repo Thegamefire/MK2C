@@ -6,5 +6,7 @@ from pynput.keyboard import Key
 mario_kart={
     "Mouse_Right_Stick": True,
     Key.shift :"A",    #Drive
-    's' :"B"
+    's' :"B",
+    'q' : "LeftStickLeft",
+    'z' : "LeftStickUp"
 }
