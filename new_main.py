@@ -37,6 +37,19 @@ direction_dict={
     "Left":"west"
 }
 
+numpad_equivalents= {
+    #pynput.keyboard.Key.insert:"NumPad0",  #Comment because it checks for insert which could screw up other things
+    pynput.keyboard.Key.end:"NumPad1",
+    pynput.keyboard.Key.down:"NumPad2",
+    pynput.keyboard.Key.page_down:"NumPad3",
+    pynput.keyboard.Key.left:"NumPad4",
+    #pynput.keyboard.<12>:"NumPad5",
+    pynput.keyboard.Key.right:"NumPad6",
+    pynput.keyboard.Key.home:"NumPad7",
+    pynput.keyboard.Key.up:"NumPad8",
+    pynput.keyboard.Key.page_up:"NumPad9"
+}
+
 def checkStickButtons(stick):
     stick_buttons={}
     for i in current_mapping:
@@ -65,7 +78,7 @@ def define_stick_direction(current_direction, added_direction=None, removed_dire
         elif (current_direction=="west" or current_direction=="east") and (added_direction=="north" or added_direction=="south"):   #Two inputs form a diagonal
             return added_direction+current_direction
 
-        elif abs(current_direction-added_direction)==4: #Inputs are facing eachother
+        elif abs(direction_dict[current_direction]-direction_dict[added_direction])==4: #Inputs are facing eachother
             return "neutral"
 
         elif direction_dict[current_direction]%2==0 and not current_direction == "neutral": #Diagonals get an extra input
@@ -213,7 +226,8 @@ def stickmovement(stick, orientation):  #changes the direction of the stick
 
 def pressed_dict():
     pressed_dict={
-        "²":False
+        "²":False,
+        pynput.keyboard.Key.insert:False
     }
     for item in current_mapping:
         pressed_dict[item]=False
@@ -226,94 +240,105 @@ def get_mapped_button(key):
     else:
         print("The button this key is mapped to doesn't exist, please check mappings.py")
 
-def on_press_keyboard(key):
-    global pressed_dict
-    if hasattr(key, 'char'):
-        if key.char in current_mapping:
-            if not pressed_dict[key.char]:
-                print(current_mapping[key.char])
-                if not current_mapping[key.char].startswith("LeftStick") and not current_mapping[key.char].startswith('RightStick'):
-                    button_to_press = get_mapped_button(key.char)
-                    if button_to_press:
-                        gamepad.press_button(button=button_to_press)
-                        gamepad.update()
-                else:
-                    if current_mapping[key.char].startswith("LeftStick"):
-                        new_direction = direction_dict[current_mapping[key.char][9:]]
-                        print(f"new_direction = {new_direction}")
-                        rotation_goal = define_stick_direction(left_stick_rotation, added_direction=new_direction)
-                        stickmovement("left", rotation_goal)
-                    else:
-                        new_direction = direction_dict[current_mapping[key.char][10:]]
-                        rotation_goal = define_stick_direction(right_stick_rotation, added_direction=new_direction)
-                        stickmovement("right", rotation_goal)
-                    print('stick')
-                pressed_dict[key.char] = True
-        if key.char == '²' and not pressed_dict[key.char]:
-            pressed_dict[key.char]=True
-    else:
-        if key in current_mapping:
-            if not pressed_dict[key]:
-                print(current_mapping[key])
-                if not current_mapping[key].startswith("LeftStick") and not current_mapping[key].startswith('RightStick'):
-                    button_to_press=get_mapped_button(key)
-                    if button_to_press:
-                        gamepad.press_button(button=button_to_press)
-                        gamepad.update
-                else:
-                    if current_mapping[key].startswith("LeftStick"):
-                        new_direction = direction_dict[current_mapping[key][9:]]
-                        rotation_goal = define_stick_direction(left_stick_rotation, added_direction=new_direction)
-                        stickmovement("left", rotation_goal)
-                    else:
-                        new_direction = direction_dict[current_mapping[key][10:]]
-                        rotation_goal = define_stick_direction(right_stick_rotation, added_direction=new_direction)
-                        stickmovement("right", rotation_goal)
-                    print('stick')
-                pressed_dict[key]=True
-        if key == pynput.keyboard.Key.esc and pressed_dict['²']:  #Escape does repeat when held
-            global time_to_stop
-            time_to_stop=True
-        
-def on_release_keyboard(key):
-    global pressed_dict
-    
-    if hasattr(key, 'char'):
-        if key.char in current_mapping:
-            if not current_mapping[key.char].startswith("LeftStick") and not current_mapping[key.char].startswith('RightStick'):
-                button_to_release = get_mapped_button(key.char)
-                if button_to_release:
-                    gamepad.release_button(button=button_to_release)
-                    gamepad.update()
-            
-            else:
-                if current_mapping[key.char].startswith("LeftStick"):
-                    new_direction = direction_dict[current_mapping[key.char][9:]]
-                    rotation_goal = define_stick_direction(left_stick_rotation, removed_direction=new_direction)
-                    stickmovement("left", rotation_goal)
-                else:
-                    new_direction = direction_dict[current_mapping[key.char][10:]]
-                    rotation_goal = define_stick_direction(right_stick_rotation, removed_direction=new_direction)
-                    stickmovement("right", rotation_goal)
-            pressed_dict[key.char]=False
-    else:
-        if key in current_mapping:
-            if not current_mapping[key].startswith("LeftStick") and not current_mapping[key].startswith("RightStick"):
-                button_to_release = get_mapped_button(key)
-                if button_to_release:
-                    gamepad.release_button(button=button_to_release)
-                    gamepad.update()
-            else:
+###########################################
+#### What happens when a key is pressed ###
+###########################################
+
+def key_to_buttonpress(key):
+    if key in current_mapping:
+        if not pressed_dict[key]:
+
+            #StickMovement
+            if current_mapping[key].startswith("LeftStick") or current_mapping[key].startswith("RightStick"):
                 if current_mapping[key].startswith("LeftStick"):
                     new_direction = direction_dict[current_mapping[key][9:]]
-                    rotation_goal = define_stick_direction(left_stick_rotation, removed_direction=new_direction)
+                    print(f"new_direction = {new_direction}")
+                    rotation_goal = define_stick_direction(left_stick_rotation, added_direction=new_direction)
                     stickmovement("left", rotation_goal)
                 else:
                     new_direction = direction_dict[current_mapping[key][10:]]
-                    rotation_goal = define_stick_direction(right_stick_rotation, removed_direction=new_direction)
+                    rotation_goal = define_stick_direction(right_stick_rotation, added_direction=new_direction)
                     stickmovement("right", rotation_goal)
-            pressed_dict[key]=False
-    print(f'{key} was released')        
+
+            elif current_mapping[key]=="LT" or current_mapping[key]=="RT":  #Triggers
+                if current_mapping[key] == "LT":
+                    gamepad.left_trigger_float(1)
+                else: 
+                    gamepad.right_trigger_float(1)
+
+            else:       #ButtonPress
+                print(current_mapping[key])
+                button_to_press=get_mapped_button(key)
+                if button_to_press:
+                    gamepad.press_button(button=button_to_press)
+                    gamepad.update()
+            pressed_dict[key]=True
+
+def on_keyboard_press(key):
+    global two_pressed
+    if key in numpad_equivalents and pressed_dict[pynput.keyboard.Key.insert]:
+        key=numpad_equivalents[key]
+        key_to_buttonpress(pynput.keyboard.Key.shift)
+        print(key)
+    if hasattr(key, 'vk'):
+        if 96<=key.vk <=105:
+            key="NumPad"+str(key.vk-96)
+        elif key.vk == 12:
+            key = "NumPad5"
+            key_to_buttonpress(pynput.keyboard.Key.shift)
+    if hasattr(key, 'char'):
+        key=key.char
+        if hasattr(key, 'lower'):
+            key=key.lower()
+        if key =='²' and not pressed_dict[key]:
+            pressed_dict[key]=True
+    key_to_buttonpress(key)
+    if key == pynput.keyboard.Key.insert and not pressed_dict[key]:
+        pressed_dict[key]=True
+
+    if key == pynput.keyboard.Key.esc and pressed_dict['²']:
+        global time_to_stop
+        time_to_stop=True
+
+def key_to_buttonrelease(key):
+    if key in current_mapping:
+        if current_mapping[key].startswith("LeftStick") or current_mapping[key].startswith("RightStick"):
+            if current_mapping[key].startswith("LeftStick"):
+                new_direction=direction_dict[current_mapping[key][9:]]
+                rotation_goal = define_stick_direction(left_stick_rotation, removed_direction=new_direction)
+                stickmovement("left", rotation_goal)
+            else:
+                new_direction=direction_dict[current_mapping[key][10:]]
+                rotation_goal = define_stick_direction(right_stick_rotation, removed_direction=new_direction)
+                stickmovement("right", rotation_goal)
+        elif current_mapping[key]=="LT" or current_mapping[key]=="RT":  #Triggers
+                if current_mapping[key] == "LT":
+                    gamepad.left_trigger_float(0)
+                else: 
+                    gamepad.right_trigger_float(0)
+        else:
+            button_to_release=get_mapped_button(key)
+            if button_to_release:
+                gamepad.release_button(button=button_to_release)
+                gamepad.update()
+        pressed_dict[key]=False
+
+def on_keyboard_release(key):
+    global two_pressed
+    if key in numpad_equivalents and pressed_dict[pynput.keyboard.Key.insert]:
+        key=numpad_equivalents[key]
+    if hasattr(key, 'vk'):
+        if 96<=key.vk <=105:
+            key="NumPad"+str(key.vk-96)
+    if hasattr(key, 'char'):
+        key=key.char
+        if hasattr(key, 'lower'):
+            key=key.lower()
+        if key =='²':
+            pressed_dict[key]=True
+    key_to_buttonrelease(key)
+    if key == pynput.keyboard.Key.insert:
+        pressed_dict[key]=False
 
 def start():
     global pressed_dict
@@ -322,7 +347,7 @@ def start():
     global right_stick_buttons
     left_stick_buttons = checkStickButtons('left')
     right_stick_buttons = checkStickButtons('right')
-    keyboard_listener=pynput.keyboard.Listener(on_press=on_press_keyboard, on_release=on_release_keyboard)
+    keyboard_listener=pynput.keyboard.Listener(on_press=on_keyboard_press, on_release=on_keyboard_release)
     keyboard_listener.start()
     global time_to_stop
     time_to_stop=False
